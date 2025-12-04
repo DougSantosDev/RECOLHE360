@@ -1,0 +1,22 @@
+﻿# === Laravel / PHP ===
+/vendor
+/.env
+/.env.*
+/storage/*.key
+/public/storage
+/storage/logs/*.log
+/bootstrap/cache/*.php
+
+# === Node / RN / Expo ===
+/node_modules
+/.expo
+.expo/*
+.expo-shared/*
+/android
+/ios
+
+# === Editor/OS ===
+.DS_Store
+Thumbs.db
+.idea
+.vscode
