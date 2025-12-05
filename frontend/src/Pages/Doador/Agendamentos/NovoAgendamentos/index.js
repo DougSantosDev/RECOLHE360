@@ -14,18 +14,21 @@ import {
 import { useRoute, useNavigation, CommonActions } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
 import { SchedulesAPI } from '../../../../services/api';
+import { useUser } from '../../../../context/UsarContext';
 
 export default function NovoAgendamento() {
   const route = useRoute();
   const navigation = useNavigation();
+  const { user } = useUser();
   const { materiais } = route.params || { materiais: [] };
   const [place, setPlace] = useState('');
   const [dataHora, setDataHora] = useState('');
   const [observacoes, setObservacoes] = useState('');
+  const [useProfileAddress, setUseProfileAddress] = useState(true);
   const [loading, setLoading] = useState(false);
 
   const confirmarEnvio = async () => {
-    if (!place.trim()) {
+    if (!useProfileAddress && !place.trim()) {
       Alert.alert('Atencao', 'Informe o local da coleta.');
       return;
     }
@@ -43,9 +46,10 @@ export default function NovoAgendamento() {
     try {
       setLoading(true);
       const payload = {
-        place: place.trim(),
         scheduled_at: dt.toISOString(),
         notes: observacoes.trim() || null,
+        use_profile_address: useProfileAddress,
+        pickup_address_text: useProfileAddress ? null : place.trim(),
         materials: materiais.map((m) => ({
           id: m.backendId || Number(m.id),
           quantity_kg: Number(m.quantidade),
@@ -53,7 +57,6 @@ export default function NovoAgendamento() {
       };
       await SchedulesAPI.create(payload);
       Alert.alert('Sucesso!', 'Seu agendamento foi enviado com sucesso!');
-      // Volta para a aba de Reciclados e limpa selecao
       navigation.dispatch(
         CommonActions.navigate({
           name: 'AppDoadorStack',
@@ -74,7 +77,7 @@ export default function NovoAgendamento() {
   };
 
   const renderItem = ({ item }) => (
-    <View style={styles.card}>
+    <View style={styles.materialCard}>
       <Image
         source={
           typeof item.imagem === 'number'
@@ -93,31 +96,72 @@ export default function NovoAgendamento() {
     </View>
   );
 
+  const enderecoPerfil = user
+    ? `${user.address_street || ''} ${user.address_number || ''} ${user.address_neighborhood || ''} ${user.address_city || ''} ${user.address_state || ''} ${user.address_zip || ''}`.trim()
+    : '';
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
-      <Text style={styles.titulo}>Detalhes do Agendamento</Text>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 48 }}>
+      <Text style={styles.title}>Detalhes do Agendamento</Text>
+      <Text style={styles.subtitle}>Confirme local, data e materiais para o coletor.</Text>
 
-      <View style={styles.form}>
-        <Text style={styles.label}>Local da coleta *</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Rua, numero, bairro..."
-          value={place}
-          onChangeText={setPlace}
-        />
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Local da coleta *</Text>
 
-        <Text style={styles.label}>Data e hora *</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Ex: 2025-12-05 14:00"
-          value={dataHora}
-          onChangeText={setDataHora}
-        />
+        <View style={styles.choiceRow}>
+          <TouchableOpacity
+            style={[styles.choice, useProfileAddress && styles.choiceActive]}
+            onPress={() => setUseProfileAddress(true)}
+          >
+            <View style={styles.choiceHeader}>
+              <Icon name="home" size={18} color={useProfileAddress ? '#2f7a4b' : '#4b5563'} />
+              <Text style={[styles.choiceTitle, useProfileAddress && styles.choiceTitleActive]}>Meu endereço</Text>
+            </View>
+            <Text style={styles.choiceDesc}>
+              {enderecoPerfil || 'Complete seu endereço em Minha Conta.'}
+            </Text>
+          </TouchableOpacity>
 
-        <Text style={styles.label}>Observacoes (opcional)</Text>
+          <TouchableOpacity
+            style={[styles.choice, !useProfileAddress && styles.choiceActive]}
+            onPress={() => setUseProfileAddress(false)}
+          >
+            <View style={styles.choiceHeader}>
+              <Icon name="map-pin" size={18} color={!useProfileAddress ? '#2f7a4b' : '#4b5563'} />
+              <Text style={[styles.choiceTitle, !useProfileAddress && styles.choiceTitleActive]}>Outro local</Text>
+            </View>
+            <Text style={styles.choiceDesc}>Digite um endereço de retirada diferente.</Text>
+          </TouchableOpacity>
+        </View>
+
+        {!useProfileAddress && (
+          <TextInput
+            style={styles.input}
+            placeholder="Rua, número, bairro..."
+            value={place}
+            onChangeText={setPlace}
+          />
+        )}
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Data e hora *</Text>
+        <View style={styles.inputWithIcon}>
+          <Icon name="calendar" size={18} color="#4b5563" />
+          <TextInput
+            style={styles.inputNoBorder}
+            placeholder="Ex: 2025-12-05 14:00"
+            value={dataHora}
+            onChangeText={setDataHora}
+          />
+        </View>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Observações (opcional)</Text>
         <TextInput
           style={[styles.input, styles.inputMultiline]}
-          placeholder="Instrucoes extras para o coletor"
+          placeholder="Ex.: Portaria, bloco B, deixar na guarita..."
           value={observacoes}
           onChangeText={setObservacoes}
           multiline
@@ -125,21 +169,25 @@ export default function NovoAgendamento() {
         />
       </View>
 
-      <FlatList
-        data={materiais}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-        scrollEnabled={false}
-        contentContainerStyle={{ paddingBottom: 20 }}
-      />
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Materiais</Text>
+        <FlatList
+          data={materiais}
+          keyExtractor={(item) => item.id}
+          renderItem={renderItem}
+          scrollEnabled={false}
+          ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+          contentContainerStyle={{ paddingTop: 8 }}
+        />
+      </View>
 
-      <TouchableOpacity style={styles.botao} onPress={confirmarEnvio} disabled={loading}>
+      <TouchableOpacity style={styles.cta} onPress={confirmarEnvio} disabled={loading}>
         {loading ? (
           <ActivityIndicator color="#fff" />
         ) : (
           <>
             <Icon name="send" size={20} color="#fff" />
-            <Text style={styles.textoBotao}>Enviar Agendamento</Text>
+            <Text style={styles.ctaText}>Enviar Agendamento</Text>
           </>
         )}
       </TouchableOpacity>
@@ -150,56 +198,64 @@ export default function NovoAgendamento() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingVertical: 40,
-    backgroundColor: '#fffacd',
-    padding: 20,
+    paddingVertical: 32,
+    backgroundColor: '#F8F9F2',
+    paddingHorizontal: 18,
   },
-  titulo: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#2d6a4f',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  form: {
+  title: { fontSize: 24, fontWeight: '700', color: '#2f7a4b', textAlign: 'center' },
+  subtitle: { fontSize: 14, color: '#55616d', textAlign: 'center', marginTop: 6, marginBottom: 16 },
+  card: {
     backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 16,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 14,
     shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowOffset: { width: 0, height: 3 },
+    shadowRadius: 6,
     elevation: 2,
   },
-  label: {
-    fontWeight: '600',
-    color: '#1b4332',
-    marginBottom: 6,
-    marginTop: 6,
-  },
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#1b4332' },
   input: {
     borderWidth: 1,
     borderColor: '#bdbdbd',
-    borderRadius: 8,
-    padding: 10,
+    borderRadius: 10,
+    padding: 12,
     backgroundColor: '#fff',
     color: '#222',
+    marginTop: 10,
+    fontSize: 16,
   },
   inputMultiline: {
-    height: 90,
+    height: 100,
     textAlignVertical: 'top',
   },
-  card: {
-    backgroundColor: '#fff',
+  inputWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#bdbdbd',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginTop: 10,
+  },
+  inputNoBorder: { flex: 1, marginLeft: 8, fontSize: 16, color: '#222' },
+  choiceRow: { flexDirection: 'row', gap: 10, marginTop: 10 },
+  choice: { flex: 1, borderWidth: 1, borderColor: '#dfe4dc', borderRadius: 12, padding: 12, backgroundColor: '#fff' },
+  choiceActive: { borderColor: '#2f7a4b', backgroundColor: '#e8ffe0' },
+  choiceHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
+  choiceTitle: { fontWeight: '700', color: '#4b5563', fontSize: 14 },
+  choiceTitleActive: { color: '#1b4332' },
+  choiceDesc: { color: '#555', fontSize: 13, lineHeight: 18 },
+  materialCard: {
+    backgroundColor: '#fdfdfd',
     borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 14,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 2,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#eef2ea',
   },
   imagem: {
     width: 50,
@@ -212,7 +268,7 @@ const styles = StyleSheet.create({
   },
   nome: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#1b4332',
   },
   quantidade: {
@@ -220,18 +276,23 @@ const styles = StyleSheet.create({
     color: '#4c6e54',
     marginTop: 4,
   },
-  botao: {
-    backgroundColor: '#40916c',
-    paddingVertical: 24,
-    borderRadius: 12,
+  cta: {
+    backgroundColor: '#2f7a4b',
+    paddingVertical: 18,
+    borderRadius: 14,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 3 },
+    shadowRadius: 6,
+    elevation: 3,
   },
-  textoBotao: {
+  ctaText: {
     color: '#fff',
-    fontWeight: '600',
+    fontWeight: '700',
     fontSize: 16,
     marginLeft: 8,
   },

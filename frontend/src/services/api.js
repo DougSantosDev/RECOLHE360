@@ -56,6 +56,7 @@ export const AuthAPI = {
   login: (payload) => api('/auth/login', { method: 'POST', body: payload }),
   me: () => api('/auth/me'),
   logout: () => api('/auth/logout', { method: 'POST' }),
+  updateAddress: (payload) => api('/auth/update-address', { method: 'PUT', body: payload }),
 };
 
 export const MaterialsAPI = {
@@ -69,4 +70,7 @@ export const SchedulesAPI = {
   create: (payload) => api('/schedules', { method: 'POST', body: payload }),
   accept: (id) => api(`/schedules/${id}/accept`, { method: 'POST' }),
   updateStatus: (id, status) => api(`/schedules/${id}/status`, { method: 'POST', body: { status } }),
+  onRoute: (id) => api(`/schedules/${id}/status`, { method: 'POST', body: { status: 'on_route' } }),
+  collected: (id) => api(`/schedules/${id}/status`, { method: 'POST', body: { status: 'collected' } }),
+  cancel: (id) => api(`/schedules/${id}/status`, { method: 'POST', body: { status: 'canceled' } }),
 };

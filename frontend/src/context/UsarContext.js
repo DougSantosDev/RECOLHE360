@@ -81,6 +81,13 @@ export const UserProvider = ({ children }) => {
     return data.user;
   };
 
+  const updateAddress = async (payload) => {
+    const updated = await AuthAPI.updateAddress(payload);
+    setUser(updated);
+    await AsyncStorage.setItem('@recolhe360/user', JSON.stringify(updated));
+    return updated;
+  };
+
   const logout = async () => {
     try { await AuthAPI.logout(); } catch {}
     await clearSession();
@@ -99,6 +106,7 @@ export const UserProvider = ({ children }) => {
       setColetasConfirmadas,
       signIn,
       register,
+       updateAddress,
       logout,
     }}>
       {children}

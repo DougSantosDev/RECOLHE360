@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, RefreshControl, Linking } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import { SchedulesAPI } from '../../../services/api';
 
@@ -23,10 +23,29 @@ export default function AgendamentosColetor() {
     load();
   }, []);
 
+  const abrirMapa = (address, lat, lng) => {
+    let url;
+    if (lat && lng) {
+      url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+    } else if (address) {
+      url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
+    }
+    if (url) Linking.openURL(url);
+  };
+
+  const marcarOnRoute = async (id) => {
+    try {
+      await SchedulesAPI.onRoute(id);
+      load();
+    } catch (e) {
+      Alert.alert('Erro', e.message || 'Falha ao marcar a caminho');
+    }
+  };
+
   const concluir = async (scheduleId) => {
     try {
-      await SchedulesAPI.updateStatus(scheduleId, 'collected');
-      Alert.alert('Sucesso', 'Agendamento marcado como concluído!');
+      await SchedulesAPI.collected(scheduleId);
+      Alert.alert('Sucesso', 'Agendamento marcado como concluido!');
       load();
     } catch (e) {
       Alert.alert('Erro', e.message || 'Falha ao concluir');
@@ -35,11 +54,12 @@ export default function AgendamentosColetor() {
 
   const renderItem = ({ item }) => {
     const donor = item.donor?.name || 'Doador';
-    const place = item.place || 'Endereço combinado';
+    const place = item.pickup_address_text || item.place || 'Endereco combinado';
     const dt = item.scheduled_at ? new Date(item.scheduled_at).toLocaleString() : 'Sem data';
     const materials = (item.materials || [])
       .map((m) => `${m.name} (${Number(m.pivot?.quantity_kg || 0)} kg)`).join(', ');
     const concluido = item.status === 'collected';
+    const onRoute = item.status === 'on_route';
     return (
       <View style={[styles.item, concluido && styles.itemConcluido]}>
         <View style={styles.info}>
@@ -49,14 +69,27 @@ export default function AgendamentosColetor() {
           <Text style={styles.subtitulo}>Materiais:</Text>
           <Text style={styles.material}>{materials}</Text>
         </View>
-        {!concluido ? (
-          <TouchableOpacity style={styles.botao} onPress={() => concluir(item.id)}>
-            <Feather name="check" size={20} color="#fff" />
-            <Text style={styles.textoBotao}>Concluir</Text>
+        <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+          <TouchableOpacity style={styles.botaoMapa} onPress={() => abrirMapa(place, item.pickup_lat, item.pickup_lng)}>
+            <Feather name="map-pin" size={18} color="#329845" />
+            <Text style={styles.textoMapa}>Mapa</Text>
           </TouchableOpacity>
-        ) : (
-          <Text style={styles.concluido}>Concluído</Text>
-        )}
+          {!concluido ? (
+            onRoute ? (
+              <TouchableOpacity style={styles.botao} onPress={() => concluir(item.id)}>
+                <Feather name="check" size={20} color="#fff" />
+                <Text style={styles.textoBotao}>Concluir</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity style={styles.botao} onPress={() => marcarOnRoute(item.id)}>
+                <Feather name="navigation" size={20} color="#fff" />
+                <Text style={styles.textoBotao}>A caminho</Text>
+              </TouchableOpacity>
+            )
+          ) : (
+            <Text style={styles.concluido}>Concluido</Text>
+          )}
+        </View>
       </View>
     );
   };
@@ -88,5 +121,6 @@ const styles = StyleSheet.create({
   botao: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#329845', padding: 8, borderRadius: 6, alignSelf: 'flex-start' },
   textoBotao: { color: '#fff', fontWeight: 'bold', marginLeft: 6 },
   concluido: { color: '#329845', fontWeight: 'bold' },
+  botaoMapa: { flexDirection: 'row', alignItems: 'center', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#329845' },
+  textoMapa: { color: '#329845', fontWeight: 'bold', marginLeft: 6 },
 });
-

@@ -18,6 +18,14 @@ class User extends Authenticatable
         'role',
         'phone',
         'address',
+        'address_street',
+        'address_number',
+        'address_neighborhood',
+        'address_city',
+        'address_state',
+        'address_zip',
+        'address_lat',
+        'address_lng',
     ];
 
     protected $hidden = [

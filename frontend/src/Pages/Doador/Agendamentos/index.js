@@ -8,6 +8,7 @@ import { SchedulesAPI } from '../../../services/api';
 const statusPT = {
   pending: 'Pendente',
   accepted: 'Confirmado',
+  on_route: 'A caminho',
   collected: 'Concluido',
   canceled: 'Cancelado',
 };

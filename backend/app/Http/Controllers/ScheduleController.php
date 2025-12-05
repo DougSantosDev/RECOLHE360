@@ -49,18 +49,48 @@ class ScheduleController extends Controller
 
         $data = $request->validate([
             'scheduled_at'            => 'required|date',
-            'place'                   => 'required|string|max:255',
+            'notes'                   => 'nullable|string',
+            'use_profile_address'     => 'nullable|boolean',
+            'pickup_address_text'     => 'nullable|string|max:500',
+            'pickup_lat'              => 'nullable|numeric',
+            'pickup_lng'              => 'nullable|numeric',
             'notes'                   => 'nullable|string',
             'materials'               => 'required|array|min:1',
             'materials.*.id'          => 'required|exists:materials,id',
             'materials.*.quantity_kg' => 'required|numeric|min:0.1',
         ]);
 
+        // Se solicitado, usa o endereco do perfil
+        if (!empty($data['use_profile_address'])) {
+            if (!$user->address_street) {
+                return response()->json(['ok' => false, 'message' => 'Complete seu endereco no perfil antes de usar o endereco padrao.'], 422);
+            }
+            $addr = trim(sprintf(
+                '%s, %s - %s, %s - %s, %s',
+                $user->address_street,
+                $user->address_number,
+                $user->address_neighborhood,
+                $user->address_city,
+                $user->address_state,
+                $user->address_zip
+            ));
+            $data['pickup_address_text'] = $addr;
+            $data['pickup_lat'] = $user->address_lat;
+            $data['pickup_lng'] = $user->address_lng;
+        }
+
+        if (empty($data['pickup_address_text'])) {
+            return response()->json(['ok' => false, 'message' => 'Informe o local da coleta.'], 422);
+        }
+
         $schedule = Schedule::create([
             'user_id'      => $user->id,
             'status'       => 'pending',
             'scheduled_at' => $data['scheduled_at'] ?? null,
-            'place'        => $data['place'] ?? null,
+            'place'        => null,
+            'pickup_address_text' => $data['pickup_address_text'] ?? null,
+            'pickup_lat'   => $data['pickup_lat'] ?? null,
+            'pickup_lng'   => $data['pickup_lng'] ?? null,
             'notes'        => $data['notes'] ?? null,
         ]);
 
@@ -118,17 +148,26 @@ class ScheduleController extends Controller
         return $schedule->fresh()->load(['materials', 'donor:id,name', 'collector:id,name']);
     }
 
-    // Update status (collector: collected / donor: canceled)
+    // Update status (collector: on_route/collected / donor: canceled)
     public function updateStatus(Request $request, Schedule $schedule)
     {
         $request->validate([
-            'status' => 'required|in:collected,canceled',
+            'status' => 'required|in:on_route,collected,canceled',
         ]);
 
         $user = $request->user();
 
         if (in_array($schedule->status, ['collected', 'canceled'])) {
             return response()->json(['ok' => false, 'message' => 'Schedule already closed'], 422);
+        }
+
+        if ($request->status === 'on_route') {
+            if ($user->id !== $schedule->collector_id) {
+                return response()->json(['ok' => false, 'message' => 'Only the assigned collector can mark on route'], 403);
+            }
+            if ($schedule->status !== 'accepted') {
+                return response()->json(['ok' => false, 'message' => 'Schedule must be accepted before on_route'], 422);
+            }
         }
 
         if ($request->status === 'collected') {

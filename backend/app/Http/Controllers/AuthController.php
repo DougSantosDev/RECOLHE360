@@ -72,4 +72,25 @@ class AuthController extends Controller
         $request->user()->currentAccessToken()->delete();
         return response()->json(['ok' => true]);
     }
+
+    public function updateAddress(Request $request)
+    {
+        $user = $request->user();
+
+        $data = $request->validate([
+            'address_street'        => 'nullable|string|max:255',
+            'address_number'        => 'nullable|string|max:20',
+            'address_neighborhood'  => 'nullable|string|max:255',
+            'address_city'          => 'nullable|string|max:255',
+            'address_state'         => 'nullable|string|max:2',
+            'address_zip'           => 'nullable|string|max:10',
+            'address_lat'           => 'nullable|numeric',
+            'address_lng'           => 'nullable|numeric',
+            'phone'                 => 'nullable|string|max:50',
+        ]);
+
+        $user->update($data);
+
+        return $user->fresh();
+    }
 }

@@ -16,10 +16,15 @@ class Schedule extends Model
         'scheduled_at',
         'place',
         'notes',
+        'pickup_address_text',
+        'pickup_lat',
+        'pickup_lng',
     ];
 
     protected $casts = [
         'scheduled_at' => 'datetime',
+        'pickup_lat' => 'float',
+        'pickup_lng' => 'float',
     ];
 
     public function donor()

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Linking } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import { SchedulesAPI } from '../../../services/api';
 
@@ -35,9 +35,37 @@ export default function RotasColetor() {
     }
   };
 
+  const onRoute = async (id) => {
+    try {
+      await SchedulesAPI.onRoute(id);
+      load();
+    } catch (e) {
+      alert(e.message || 'Falha ao atualizar para a caminho');
+    }
+  };
+
+  const collected = async (id) => {
+    try {
+      await SchedulesAPI.collected(id);
+      load();
+    } catch (e) {
+      alert(e.message || 'Falha ao concluir coleta');
+    }
+  };
+
+  const abrirMapa = (address, lat, lng) => {
+    let url;
+    if (lat && lng) {
+      url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+    } else if (address) {
+      url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
+    }
+    if (url) Linking.openURL(url);
+  };
+
   const renderItem = ({ item }) => {
     const donor = item.donor?.name || 'Doador';
-    const place = item.place || 'Endereço combinado';
+    const place = item.pickup_address_text || item.place || 'Endereco combinado';
     const dt = item.scheduled_at ? new Date(item.scheduled_at).toLocaleString() : 'Sem data';
     const acceptedByMe = !!item.collector_id;
     return (
@@ -45,12 +73,33 @@ export default function RotasColetor() {
         <Text style={styles.endereco}>{place}</Text>
         <Text style={styles.dataHora}>Data: {dt}</Text>
         <Text style={styles.dataHora}>Doador: {donor}</Text>
-        {tab === 'pending' ? (
-          <TouchableOpacity style={styles.botao} onPress={() => accept(item.id)}>
-            <Feather name="check-circle" size={20} color="#fff" />
-            <Text style={styles.textoBotao}>Aceitar</Text>
+        <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
+          <TouchableOpacity style={styles.botaoSec} onPress={() => abrirMapa(place, item.pickup_lat, item.pickup_lng)}>
+            <Feather name="map-pin" size={18} color="#329845" />
+            <Text style={styles.textoBotaoSec}>Mapa</Text>
           </TouchableOpacity>
-        ) : null}
+          {tab === 'pending' ? (
+            <TouchableOpacity style={styles.botao} onPress={() => accept(item.id)}>
+              <Feather name="check-circle" size={20} color="#fff" />
+              <Text style={styles.textoBotao}>Aceitar</Text>
+            </TouchableOpacity>
+          ) : (
+            <>
+              {item.status === 'accepted' ? (
+                <TouchableOpacity style={styles.botao} onPress={() => onRoute(item.id)}>
+                  <Feather name="navigation" size={20} color="#fff" />
+                  <Text style={styles.textoBotao}>A caminho</Text>
+                </TouchableOpacity>
+              ) : null}
+              {item.status === 'on_route' ? (
+                <TouchableOpacity style={styles.botao} onPress={() => collected(item.id)}>
+                  <Feather name="check" size={20} color="#fff" />
+                  <Text style={styles.textoBotao}>Concluir</Text>
+                </TouchableOpacity>
+              ) : null}
+            </>
+          )}
+        </View>
       </View>
     );
   };
@@ -94,5 +143,6 @@ const styles = StyleSheet.create({
   dataHora: { fontSize: 14, color: '#666', marginBottom: 8 },
   botao: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#329845', padding: 8, borderRadius: 6, alignSelf: 'flex-start' },
   textoBotao: { color: '#fff', fontWeight: 'bold', marginLeft: 6 },
+  botaoSec: { flexDirection: 'row', alignItems: 'center', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#329845' },
+  textoBotaoSec: { color: '#329845', fontWeight: 'bold', marginLeft: 6 },
 });
-
