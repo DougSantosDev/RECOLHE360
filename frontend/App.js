@@ -1,14 +1,24 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import Routes from './src/Routes';
-import { UserProvider } from './src/context/UsarContext'; // caminho correto
+import { UserProvider } from './src/context/UsarContext';
+import { ThemeProvider, useThemeRecolhe } from './src/context/ThemeContext';
+
+function ThemedNavigation() {
+  const { navigationTheme } = useThemeRecolhe();
+  return (
+    <NavigationContainer theme={navigationTheme}>
+      <Routes />
+    </NavigationContainer>
+  );
+}
 
 export default function App() {
   return (
-    <NavigationContainer>
+    <ThemeProvider>
       <UserProvider>
-        <Routes />
+        <ThemedNavigation />
       </UserProvider>
-    </NavigationContainer>
+    </ThemeProvider>
   );
-} 
+}

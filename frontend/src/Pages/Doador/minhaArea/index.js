@@ -1,10 +1,21 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import { useUser } from '../../../context/UsarContext';
+import React, { useMemo, useState } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+} from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import Icon from 'react-native-vector-icons/Feather';
+
+import { useUser } from '../../../context/UsarContext';
+import { useThemeRecolhe } from '../../../context/ThemeContext';
 
 export default function MinhaArea() {
   const { user, updateAddress } = useUser();
+  const { dark } = useThemeRecolhe();
   const [editMode, setEditMode] = useState(false);
 
   const [telefone, setTelefone] = useState(user?.phone || '');
@@ -15,17 +26,64 @@ export default function MinhaArea() {
   const [state, setState] = useState(user?.address_state || '');
   const [zip, setZip] = useState(user?.address_zip || '');
 
-  const formatAddress = () => {
-    return [
-      street,
-      number && `, ${number}`,
-      neighborhood && ` - ${neighborhood}`,
-      city && `, ${city}`,
-      state && ` - ${state}`,
-      zip && `, ${zip}`,
+  const palette = useMemo(
+    () => ({
+      bg: dark ? '#0f1410' : '#F3F7EE',
+      card: dark ? '#1b1f1b' : '#FFFFFF',
+      text: dark ? '#E6E6E6' : '#111827',
+      muted: dark ? '#9aa3a6' : '#6B7280',
+      primary: '#2F7A4B',
+      border: dark ? '#2f3b30' : '#EDF2E6',
+      inputBg: dark ? '#1f271f' : '#FAFAFA',
+    }),
+    [dark],
+  );
+
+  const handlePhoneChange = (value) => {
+    const digits = (value || '').replace(/\D/g, '').slice(0, 11);
+    setTelefone(digits);
+  };
+
+  const handleZipChange = (value) => {
+    const digits = (value || '').replace(/\D/g, '').slice(0, 8);
+    setZip(digits);
+  };
+
+  const phoneMasked = useMemo(() => {
+    const digits = (telefone || '').replace(/\D/g, '');
+    if (!digits) return '';
+    if (digits.length <= 10) {
+      return digits.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3').trim();
+    }
+    return digits.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3').trim();
+  }, [telefone]);
+
+  const cepMasked = useMemo(() => {
+    const digits = (zip || '').replace(/\D/g, '');
+    if (!digits) return '';
+    return digits.replace(/(\d{5})(\d{0,3})/, '$1-$2').trim();
+  }, [zip]);
+
+  const formatAddress = () =>
+    [
+      street && street.trim(),
+      number && `, ${number}`.trim(),
+      neighborhood && ` - ${neighborhood}`.trim(),
+      city && `, ${city}`.trim(),
+      state && ` - ${state.toUpperCase()}`.trim(),
+      cepMasked && `, ${cepMasked}`.trim(),
     ]
       .filter(Boolean)
       .join('');
+
+  const resetFields = () => {
+    setTelefone(user?.phone || '');
+    setStreet(user?.address_street || '');
+    setNumber(user?.address_number || '');
+    setNeighborhood(user?.address_neighborhood || '');
+    setCity(user?.address_city || '');
+    setState(user?.address_state || '');
+    setZip(user?.address_zip || '');
   };
 
   const handleSalvar = async () => {
@@ -36,77 +94,164 @@ export default function MinhaArea() {
         address_number: number || null,
         address_neighborhood: neighborhood || null,
         address_city: city || null,
-        address_state: state || null,
+        address_state: state?.toUpperCase() || null,
         address_zip: zip || null,
       });
       setEditMode(false);
       Alert.alert('Sucesso', 'Dados atualizados com sucesso!');
     } catch (err) {
-      Alert.alert('Erro', err?.message || 'Nao foi possivel atualizar os dados.');
+      Alert.alert('Erro', err?.message || 'Não foi possível atualizar os dados.');
     }
   };
 
   return (
-    <View style={styles.background}>
+    <View style={[styles.container, { backgroundColor: palette.bg }]}>
       <KeyboardAwareScrollView
-        contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
+        contentContainerStyle={styles.scrollContent}
         enableOnAndroid
         extraHeight={140}
         extraScrollHeight={120}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.card}>
-          <Text style={styles.titulo}>Minha Area</Text>
+        <Text style={[styles.title, { color: palette.text }]}>Minha área</Text>
+        <Text style={[styles.subtitle, { color: palette.muted }]}>
+          Revise seus dados e endereço para facilitar as coletas.
+        </Text>
+
+        <View style={[styles.card, { backgroundColor: palette.card, shadowColor: dark ? '#000' : palette.primary }]}>
+          <Text style={[styles.sectionTitle, { color: palette.text }]}>Dados pessoais</Text>
+
           {editMode ? (
             <>
-              <Text style={styles.label}>Nome</Text>
-              <TextInput style={styles.input} value={user?.name || ''} editable={false} />
-              <Text style={styles.label}>Email</Text>
-              <TextInput style={styles.input} value={user?.email || ''} editable={false} />
-              <Text style={styles.label}>Telefone</Text>
-              <TextInput style={styles.input} value={telefone} onChangeText={setTelefone} placeholder="Telefone" />
+              <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.inputBg }]}>
+                <Icon name="user" size={18} color={palette.muted} />
+                <Text style={[styles.inputReadOnly, { color: palette.text }]}>{user?.name || 'Sem nome'}</Text>
+              </View>
 
-              <Text style={styles.label}>Rua</Text>
-              <TextInput style={styles.input} value={street} onChangeText={setStreet} placeholder="Rua" />
-              <Text style={styles.label}>Numero</Text>
-              <TextInput style={styles.input} value={number} onChangeText={setNumber} placeholder="Numero" />
-              <Text style={styles.label}>Bairro</Text>
-              <TextInput style={styles.input} value={neighborhood} onChangeText={setNeighborhood} placeholder="Bairro" />
-              <Text style={styles.label}>Cidade</Text>
-              <TextInput style={styles.input} value={city} onChangeText={setCity} placeholder="Cidade" />
-              <Text style={styles.label}>Estado (UF)</Text>
-              <TextInput style={styles.input} value={state} onChangeText={setState} maxLength={2} placeholder="UF" />
-              <Text style={styles.label}>CEP</Text>
-              <TextInput style={styles.input} value={zip} onChangeText={setZip} placeholder="CEP" />
+              <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.inputBg }]}>
+                <Icon name="mail" size={18} color={palette.muted} />
+                <Text style={[styles.inputReadOnly, { color: palette.text }]}>{user?.email}</Text>
+              </View>
 
-              <TouchableOpacity style={styles.botao} onPress={handleSalvar}>
-                <Text style={styles.textoBotao}>Salvar</Text>
+              <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.inputBg }]}>
+                <Icon name="phone" size={18} color={palette.muted} />
+                <TextInput
+                  style={[styles.input, { color: palette.text }]}
+                  placeholder="Telefone"
+                  placeholderTextColor={palette.muted}
+                  keyboardType="phone-pad"
+                  value={phoneMasked}
+                  onChangeText={handlePhoneChange}
+                />
+              </View>
+            </>
+          ) : (
+            <>
+              <InfoRow icon="user" label="Nome" value={user?.name} color={palette} />
+              <InfoRow icon="mail" label="E-mail" value={user?.email} color={palette} />
+              <InfoRow icon="phone" label="Telefone" value={phoneMasked || 'Não informado'} color={palette} />
+            </>
+          )}
+
+          <Text style={[styles.sectionTitle, { color: palette.text, marginTop: 18 }]}>Endereço</Text>
+
+          {editMode ? (
+            <>
+              <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.inputBg }]}>
+                <Icon name="map-pin" size={18} color={palette.muted} />
+                <TextInput
+                  style={[styles.input, { color: palette.text }]}
+                  placeholder="Rua"
+                  placeholderTextColor={palette.muted}
+                  value={street}
+                  onChangeText={setStreet}
+                />
+              </View>
+
+              <View style={styles.row}>
+                <View style={styles.rowItem}>
+                  <Text style={[styles.smallLabel, { color: palette.muted }]}>Número</Text>
+                  <TextInput
+                    style={[styles.inputInline, { color: palette.text, backgroundColor: palette.inputBg, borderColor: palette.border }]}
+                    placeholder="Nº"
+                    placeholderTextColor={palette.muted}
+                    keyboardType="numeric"
+                    value={number}
+                    onChangeText={setNumber}
+                  />
+                </View>
+                <View style={styles.rowItem}>
+                  <Text style={[styles.smallLabel, { color: palette.muted }]}>Bairro</Text>
+                  <TextInput
+                    style={[styles.inputInline, { color: palette.text, backgroundColor: palette.inputBg, borderColor: palette.border }]}
+                    placeholder="Bairro"
+                    placeholderTextColor={palette.muted}
+                    value={neighborhood}
+                    onChangeText={setNeighborhood}
+                  />
+                </View>
+              </View>
+
+              <View style={styles.row}>
+                <View style={[styles.rowItem, { flex: 1 }]}>
+                  <Text style={[styles.smallLabel, { color: palette.muted }]}>Cidade</Text>
+                  <TextInput
+                    style={[styles.inputInline, { color: palette.text, backgroundColor: palette.inputBg, borderColor: palette.border }]}
+                    placeholder="Cidade"
+                    placeholderTextColor={palette.muted}
+                    value={city}
+                    onChangeText={setCity}
+                  />
+                </View>
+                <View style={styles.rowItemSmall}>
+                  <Text style={[styles.smallLabel, { color: palette.muted }]}>UF</Text>
+                  <TextInput
+                    style={[styles.inputInline, { color: palette.text, backgroundColor: palette.inputBg, borderColor: palette.border, textTransform: 'uppercase' }]}
+                    placeholder="SP"
+                    maxLength={2}
+                    placeholderTextColor={palette.muted}
+                    value={state}
+                    onChangeText={(value) => setState(value.toUpperCase())}
+                    autoCapitalize="characters"
+                  />
+                </View>
+              </View>
+
+              <View style={[styles.inputWrapper, { borderColor: palette.border, backgroundColor: palette.inputBg }]}>
+                <Icon name="mail" size={18} color={palette.muted} />
+                <TextInput
+                  style={[styles.input, { color: palette.text }]}
+                  placeholder="CEP"
+                  placeholderTextColor={palette.muted}
+                  keyboardType="numeric"
+                  value={cepMasked}
+                  onChangeText={handleZipChange}
+                />
+              </View>
+
+              <TouchableOpacity style={[styles.primaryButton, { backgroundColor: palette.primary }]} onPress={handleSalvar}>
+                <Text style={styles.primaryButtonText}>Salvar alterações</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.cancelar} onPress={() => setEditMode(false)}>
-                <Text style={styles.cancelarTexto}>Cancelar</Text>
+
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => {
+                  resetFields();
+                  setEditMode(false);
+                }}
+              >
+                <Text style={[styles.cancelButtonText, { color: '#d32f2f' }]}>Cancelar</Text>
               </TouchableOpacity>
             </>
           ) : (
             <>
-              <View style={styles.infoBox}>
-                <Text style={styles.infoLabel}>Nome:</Text>
-                <Text style={styles.infoValue}>{user?.name}</Text>
-              </View>
-              <View style={styles.infoBox}>
-                <Text style={styles.infoLabel}>Email:</Text>
-                <Text style={styles.infoValue}>{user?.email}</Text>
-              </View>
-              <View style={styles.infoBox}>
-                <Text style={styles.infoLabel}>Telefone:</Text>
-                <Text style={styles.infoValue}>{telefone || 'Nao informado'}</Text>
-              </View>
-              <View style={styles.infoBox}>
-                <Text style={styles.infoLabel}>Endereco:</Text>
-                <Text style={styles.infoValue}>{formatAddress() || 'Nao informado'}</Text>
-              </View>
-              <TouchableOpacity style={styles.botao} onPress={() => setEditMode(true)}>
-                <Text style={styles.textoBotao}>Editar Dados</Text>
+              <InfoRow icon="home" label="Endereço" value={formatAddress() || 'Não informado'} color={palette} />
+              <TouchableOpacity
+                style={[styles.primaryButton, { backgroundColor: palette.primary, marginTop: 18 }]}
+                onPress={() => setEditMode(true)}
+              >
+                <Text style={styles.primaryButtonText}>Editar dados</Text>
               </TouchableOpacity>
             </>
           )}
@@ -116,92 +261,126 @@ export default function MinhaArea() {
   );
 }
 
+function InfoRow({ icon, label, value, color }) {
+  return (
+    <View style={[styles.infoRow, { borderBottomColor: color.border }]}>
+      <Icon name={icon} size={18} color={color.primary} />
+      <View style={styles.infoTextBox}>
+        <Text style={[styles.infoLabel, { color: color.muted }]}>{label}</Text>
+        <Text style={[styles.infoValue, { color: color.text }]}>{value || 'Não informado'}</Text>
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  background: {
+  container: {
     flex: 1,
-    backgroundColor: '#fffacd',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 12,
+  },
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 24,
+    paddingBottom: 32,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 16,
   },
   card: {
-    width: '100%',
-    backgroundColor: '#fff',
-    borderRadius: 25,
-    padding: 28,
-    elevation: 4,
-    shadowColor: '#329845',
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    marginVertical: 32,
-  },
-  titulo: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#329845',
-    textAlign: 'center',
-    marginBottom: 26,
-    letterSpacing: 0.6,
-  },
-  label: {
-    fontSize: 17,
-    color: '#329845',
-    fontWeight: '600',
-    marginBottom: 3,
-    marginTop: 14,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#d6d6d6',
-    borderRadius: 10,
-    backgroundColor: '#fffacd',
-    padding: 10,
-    fontSize: 16,
-    marginBottom: 6,
-  },
-  infoBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-    padding: 10,
-    backgroundColor: '#f6ffe7',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#e2e8cf',
-  },
-  infoLabel: {
-    color: '#329845',
-    fontWeight: 'bold',
-    width: 90,
-    fontSize: 16,
-  },
-  infoValue: {
-    color: '#444',
-    fontSize: 16,
-    flexShrink: 1,
-  },
-  botao: {
-    backgroundColor: '#329845',
-    borderRadius: 12,
-    paddingVertical: 14,
-    marginTop: 18,
-    alignItems: 'center',
+    borderRadius: 20,
+    padding: 18,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
     elevation: 2,
   },
-  textoBotao: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 18,
-    letterSpacing: 0.5,
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 8,
   },
-  cancelar: {
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+  },
+  infoTextBox: {
+    marginLeft: 10,
+    flex: 1,
+  },
+  infoLabel: {
+    fontSize: 12,
+  },
+  infoValue: {
+    fontSize: 15,
+    marginTop: 2,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginTop: 12,
+  },
+  input: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 15,
+  },
+  inputReadOnly: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 15,
+  },
+  row: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 12,
+  },
+  rowItem: {
+    flex: 1,
+  },
+  rowItemSmall: {
+    width: 70,
+  },
+  smallLabel: {
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  inputInline: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    fontSize: 14,
+  },
+  primaryButton: {
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 20,
+    elevation: 2,
+  },
+  primaryButtonText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 16,
+  },
+  cancelButton: {
     marginTop: 10,
     alignItems: 'center',
   },
-  cancelarTexto: {
-    color: '#d32f2f',
-    fontSize: 16,
-    fontWeight: 'bold',
+  cancelButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

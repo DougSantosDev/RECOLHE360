@@ -1,14 +1,26 @@
-﻿import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import * as Animatable from 'react-native-animatable';
 import { useNavigation } from '@react-navigation/native';
+import { useThemeRecolhe } from '../../context/ThemeContext';
 
 export default function Welcome() {
   const navigation = useNavigation();
+  const { dark } = useThemeRecolhe();
+
+  const palette = useMemo(
+    () => ({
+      bg: dark ? '#0f1410' : '#329845',
+      card: dark ? '#1b1f1b' : '#fffacd',
+      text: dark ? '#e5e5e5' : '#333',
+      muted: dark ? '#b5b5b5' : '#666',
+      button: '#2f7a4b',
+    }),
+    [dark],
+  );
 
   return (
-    <View style={styles.container}>
-      {/* Logo animada */}
+    <View style={[styles.container, { backgroundColor: palette.bg }]}>
       <View style={styles.containerLogo}>
         <Animatable.Image
           animation="flipInY"
@@ -18,20 +30,12 @@ export default function Welcome() {
         />
       </View>
 
-      {/* Parte inferior com botão */}
-      <Animatable.View
-        delay={600}
-        animation="fadeInUp"
-        style={styles.containerForm}
-      >
-        <Text style={styles.title}>Bem-vindo</Text>
-        <Text style={styles.title}>RECOLHE360</Text>
-        <Text style={styles.paragraph}>Faça o login para começar</Text>
+      <Animatable.View delay={600} animation="fadeInUp" style={[styles.containerForm, { backgroundColor: palette.card }]}>
+        <Text style={[styles.title, { color: palette.text }]}>Bem-vindo</Text>
+        <Text style={[styles.title, { color: palette.text }]}>RECOLHE360</Text>
+        <Text style={[styles.paragraph, { color: palette.muted }]}>Faça o login para começar</Text>
 
-        <TouchableOpacity
-          style={styles.button}
-          onPress={() => navigation.navigate('Escolha')}
-        >
+        <TouchableOpacity style={[styles.button, { backgroundColor: palette.button }]} onPress={() => navigation.navigate('Escolha')}>
           <Text style={styles.buttonText}>Acessar</Text>
         </TouchableOpacity>
       </Animatable.View>
@@ -42,7 +46,6 @@ export default function Welcome() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#329845',
   },
   containerLogo: {
     flex: 0.9,
@@ -55,7 +58,6 @@ const styles = StyleSheet.create({
   },
   containerForm: {
     flex: 1,
-    backgroundColor: '#fffacd',
     borderTopLeftRadius: 10,
     borderTopRightRadius: 25,
     paddingHorizontal: '5%',
@@ -67,16 +69,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginTop: 5,
     marginBottom: 5,
-    color: '#333',
   },
   paragraph: {
     marginTop: 95,
-    color: '#666',
     fontSize: 15,
   },
   button: {
     position: 'absolute',
-    backgroundColor: '#329845',
     borderRadius: 50,
     paddingVertical: 8,
     width: '60%',

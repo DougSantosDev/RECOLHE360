@@ -1,4 +1,4 @@
-﻿// src/routes/index.js
+// src/routes/index.js
 
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
@@ -7,6 +7,7 @@ import { createDrawerNavigator, DrawerContentScrollView, DrawerItemList } from '
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Feather from 'react-native-vector-icons/Feather';
 import { useUser } from '../context/UsarContext';
+import { useThemeRecolhe } from '../context/ThemeContext';
 
 // Importando telas
 import Welcome from '../Pages/Welcome';
@@ -29,15 +30,31 @@ import HomeColetor from '../Pages/Coletor/HomeColetor';
 import RotasColetor from '../Pages/Coletor/RotasColetor';
 import MetasColetor from '../Pages/Coletor/MetasColetor';
 import AgendamentosColetor from '../Pages/Coletor/AgendamentoColetor';
-import MinhaContaColetor from '../Pages/Doador/minhaArea'; // Ajuda pra exemplo, ajuste o caminho se mudar
+import MinhaContaColetor from '../Pages/Doador/minhaArea';
+
+// Legal modal
+import LegalModal from '../Pages/Legal/LegalModal';
 
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
 const Tab = createBottomTabNavigator();
 
-// Drawer customizado com botão Sair
+function usePalette(dark) {
+  return {
+    bg: dark ? '#0f1410' : '#f2fdf2',
+    card: dark ? '#1b1f1b' : '#ffffff',
+    text: dark ? '#e6e6e6' : '#222',
+    muted: dark ? '#9aa3a6' : '#555',
+    primary: '#2f7a4b',
+    drawerBg: dark ? '#181d18' : '#fff',
+    border: dark ? '#2f3b30' : '#e0e0e0',
+  };
+}
+
 function CustomDrawerContent(props) {
   const { logout } = useUser();
+  const { dark } = useThemeRecolhe();
+  const palette = usePalette(dark);
 
   const handleLogout = () => {
     logout();
@@ -47,7 +64,10 @@ function CustomDrawerContent(props) {
     <DrawerContentScrollView {...props}>
       <DrawerItemList {...props} />
       <View style={styles.logoutContainer}>
-        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+        <TouchableOpacity
+          onPress={handleLogout}
+          style={[styles.logoutButton, { backgroundColor: '#d32f2f' }]}
+        >
           <Text style={styles.logoutText}>Sair</Text>
         </TouchableOpacity>
       </View>
@@ -55,16 +75,27 @@ function CustomDrawerContent(props) {
   );
 }
 
-// TabNavigator DOADOR com nomes únicos
 function TabNavigatorDoador() {
+  const { dark } = useThemeRecolhe();
+  const palette = usePalette(dark);
   return (
-    <Tab.Navigator screenOptions={{ headerShown: false }}>
+    <Tab.Navigator
+      screenOptions={{
+        headerShown: false,
+        tabBarStyle: {
+          backgroundColor: palette.card,
+          borderTopColor: palette.border,
+        },
+        tabBarActiveTintColor: palette.primary,
+        tabBarInactiveTintColor: palette.muted,
+      }}
+    >
       <Tab.Screen
         name="HomeTabDoador"
         component={HomeDoador}
         options={{
           tabBarIcon: ({ color, size }) => <Feather name="home" size={size} color={color} />,
-          title: 'Início'
+          title: 'Início',
         }}
       />
       <Tab.Screen
@@ -72,7 +103,7 @@ function TabNavigatorDoador() {
         component={RecicladosDoador}
         options={{
           tabBarIcon: ({ color, size }) => <Feather name="trash-2" size={size} color={color} />,
-          title: 'Reciclados'
+          title: 'Reciclados',
         }}
       />
       <Tab.Screen
@@ -80,7 +111,7 @@ function TabNavigatorDoador() {
         component={NoticiasDoador}
         options={{
           tabBarIcon: ({ color, size }) => <Feather name="book-open" size={size} color={color} />,
-          title: 'Tudo sobre ♻️'
+          title: 'Tudo sobre ♻️',
         }}
       />
       <Tab.Screen
@@ -88,23 +119,34 @@ function TabNavigatorDoador() {
         component={AgendamentosDoador}
         options={{
           tabBarIcon: ({ color, size }) => <Feather name="mail" size={size} color={color} />,
-          title: 'Agendamentos'
+          title: 'Agendamentos',
         }}
       />
     </Tab.Navigator>
   );
 }
 
-// TabNavigator COLETOR com nomes únicos
 function TabNavigatorColetor() {
+  const { dark } = useThemeRecolhe();
+  const palette = usePalette(dark);
   return (
-    <Tab.Navigator screenOptions={{ headerShown: false }}>
+    <Tab.Navigator
+      screenOptions={{
+        headerShown: false,
+        tabBarStyle: {
+          backgroundColor: palette.card,
+          borderTopColor: palette.border,
+        },
+        tabBarActiveTintColor: palette.primary,
+        tabBarInactiveTintColor: palette.muted,
+      }}
+    >
       <Tab.Screen
         name="HomeTabColetor"
         component={HomeColetor}
         options={{
           tabBarIcon: ({ color, size }) => <Feather name="home" size={size} color={color} />,
-          title: 'Início'
+          title: 'Início',
         }}
       />
       <Tab.Screen
@@ -112,7 +154,7 @@ function TabNavigatorColetor() {
         component={RotasColetor}
         options={{
           tabBarIcon: ({ color, size }) => <Feather name="map" size={size} color={color} />,
-          title: 'Rotas'
+          title: 'Rotas',
         }}
       />
       <Tab.Screen
@@ -120,7 +162,7 @@ function TabNavigatorColetor() {
         component={MetasColetor}
         options={{
           tabBarIcon: ({ color, size }) => <Feather name="target" size={size} color={color} />,
-          title: 'Metas'
+          title: 'Metas',
         }}
       />
       <Tab.Screen
@@ -128,18 +170,26 @@ function TabNavigatorColetor() {
         component={AgendamentosColetor}
         options={{
           tabBarIcon: ({ color, size }) => <Feather name="calendar" size={size} color={color} />,
-          title: 'Agendamentos'
+          title: 'Agendamentos',
         }}
       />
     </Tab.Navigator>
   );
 }
 
-// Drawer DOADOR com nomes únicos
 function DrawerNavigatorDoador() {
+  const { dark } = useThemeRecolhe();
+  const palette = usePalette(dark);
   return (
     <Drawer.Navigator
-      screenOptions={{ headerShown: true }}
+      screenOptions={{
+        headerShown: true,
+        headerStyle: { backgroundColor: palette.card },
+        headerTintColor: palette.text,
+        drawerStyle: { backgroundColor: palette.drawerBg },
+        drawerActiveTintColor: palette.primary,
+        drawerInactiveTintColor: palette.muted,
+      }}
       drawerContent={(props) => <CustomDrawerContent {...props} />}
     >
       <Drawer.Screen
@@ -154,11 +204,19 @@ function DrawerNavigatorDoador() {
   );
 }
 
-// Drawer COLETOR com nomes únicos
 function DrawerNavigatorColetor() {
+  const { dark } = useThemeRecolhe();
+  const palette = usePalette(dark);
   return (
     <Drawer.Navigator
-      screenOptions={{ headerShown: true }}
+      screenOptions={{
+        headerShown: true,
+        headerStyle: { backgroundColor: palette.card },
+        headerTintColor: palette.text,
+        drawerStyle: { backgroundColor: palette.drawerBg },
+        drawerActiveTintColor: palette.primary,
+        drawerInactiveTintColor: palette.muted,
+      }}
       drawerContent={(props) => <CustomDrawerContent {...props} />}
     >
       <Drawer.Screen
@@ -191,12 +249,18 @@ const styles = StyleSheet.create({
   },
 });
 
-// STACK PRINCIPAL COM NOMES ÚNICOS
 export default function Routes() {
   const { signed, tipo } = useUser();
+  const { dark } = useThemeRecolhe();
+  const palette = usePalette(dark);
 
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: palette.bg },
+      }}
+    >
       {!signed ? (
         <>
           <Stack.Screen name="Welcome" component={Welcome} />
@@ -213,7 +277,12 @@ export default function Routes() {
       <Stack.Screen
         name="NoticiasDetalhes"
         component={NoticiasDetalhes}
-        options={{ title: 'Tudo sobre ♻️' }}
+        options={{ title: 'Tudo sobre ??' }}
+      />
+      <Stack.Screen
+        name="LegalModal"
+        component={LegalModal}
+        options={{ headerShown: false }}
       />
     </Stack.Navigator>
   );
