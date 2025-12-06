@@ -9,12 +9,12 @@ import {
   Alert,
   ActivityIndicator,
   TextInput,
-  ScrollView,
 } from 'react-native';
 import { useRoute, useNavigation, CommonActions } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
 import { SchedulesAPI } from '../../../../services/api';
 import { useUser } from '../../../../context/UsarContext';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 export default function NovoAgendamento() {
   const route = useRoute();
@@ -22,19 +22,38 @@ export default function NovoAgendamento() {
   const { user } = useUser();
   const { materiais } = route.params || { materiais: [] };
   const [place, setPlace] = useState('');
-  const [dataHora, setDataHora] = useState('');
+  const [dataStr, setDataStr] = useState('');
+  const [horaStr, setHoraStr] = useState('');
   const [observacoes, setObservacoes] = useState('');
   const [useProfileAddress, setUseProfileAddress] = useState(true);
   const [loading, setLoading] = useState(false);
+
+  const buildDate = (dateInput, timeInput) => {
+    const trimmedDate = (dateInput || '').trim();
+    const trimmedTime = (timeInput || '').trim();
+    if (!trimmedDate || !trimmedTime) return null;
+
+    // Suporta dd/mm/aaaa ou aaaa-mm-dd
+    let isoDate = trimmedDate;
+    const slashMatch = trimmedDate.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (slashMatch) {
+      const [_, d, m, y] = slashMatch;
+      isoDate = `${y}-${m}-${d}`;
+    }
+
+    const final = new Date(`${isoDate}T${trimmedTime}:00`);
+    if (isNaN(final.getTime())) return null;
+    return final;
+  };
 
   const confirmarEnvio = async () => {
     if (!useProfileAddress && !place.trim()) {
       Alert.alert('Atencao', 'Informe o local da coleta.');
       return;
     }
-    const dt = new Date(dataHora || '');
-    if (!dataHora || isNaN(dt.getTime())) {
-      Alert.alert('Atencao', 'Informe data e hora validas (ex: 2025-12-05 14:00).');
+    const dt = buildDate(dataStr, horaStr);
+    if (!dt) {
+      Alert.alert('Atencao', 'Informe data e hora válidas (ex: 12/12/2025 e 14:00).');
       return;
     }
 
@@ -101,7 +120,15 @@ export default function NovoAgendamento() {
     : '';
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 48 }}>
+    <KeyboardAwareScrollView
+      style={styles.container}
+      contentContainerStyle={{ paddingBottom: 48 }}
+      enableOnAndroid
+      extraHeight={140}
+      extraScrollHeight={120}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+    >
       <Text style={styles.title}>Detalhes do Agendamento</Text>
       <Text style={styles.subtitle}>Confirme local, data e materiais para o coletor.</Text>
 
@@ -150,9 +177,18 @@ export default function NovoAgendamento() {
           <Icon name="calendar" size={18} color="#4b5563" />
           <TextInput
             style={styles.inputNoBorder}
-            placeholder="Ex: 2025-12-05 14:00"
-            value={dataHora}
-            onChangeText={setDataHora}
+            placeholder="Ex: 12/12/2025"
+            value={dataStr}
+            onChangeText={setDataStr}
+          />
+        </View>
+        <View style={[styles.inputWithIcon, { marginTop: 8 }]}>
+          <Icon name="clock" size={18} color="#4b5563" />
+          <TextInput
+            style={styles.inputNoBorder}
+            placeholder="Ex: 14:00"
+            value={horaStr}
+            onChangeText={setHoraStr}
           />
         </View>
       </View>
@@ -191,7 +227,7 @@ export default function NovoAgendamento() {
           </>
         )}
       </TouchableOpacity>
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 

@@ -1,13 +1,14 @@
 // src/Pages/Doador/Agendamentos/index.js
 
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { SchedulesAPI } from '../../../services/api';
 
 const statusPT = {
   pending: 'Pendente',
   accepted: 'Confirmado',
+  arrived: 'Chegou',
   on_route: 'A caminho',
   collected: 'Concluido',
   canceled: 'Cancelado',
@@ -51,6 +52,8 @@ export default function Agendamentos() {
           const dtStr = dt ? dt.toLocaleString() : 'Sem data';
           const statusCode = item.status;
           const st = statusPT[statusCode] || statusCode;
+          const isArrived = statusCode === 'arrived';
+          const isOnRoute = statusCode === 'on_route';
           return (
             <View style={styles.card}>
               <Text style={styles.material}>{materials || 'Materiais'}</Text>
@@ -58,6 +61,28 @@ export default function Agendamentos() {
               <View style={[styles.status, getStatusStyle(statusCode)]}>
                 <Text style={styles.statusTexto}>{st}</Text>
               </View>
+              {isOnRoute ? (
+                <Text style={styles.infoBanner}>O coletor está a caminho.</Text>
+              ) : null}
+              {isArrived ? (
+                <>
+                  <Text style={styles.infoBanner}>O coletor chegou ao local.</Text>
+                  <TouchableOpacity
+                    style={styles.botaoConfirmar}
+                    onPress={async () => {
+                      try {
+                        const updated = await SchedulesAPI.confirmCollection(item.id);
+                        setItems((prev) => prev.map((it) => (it.id === item.id ? updated.schedule || updated : it)));
+                        Alert.alert('Sucesso', 'Coleta confirmada.');
+                      } catch (e) {
+                        Alert.alert('Erro', e.message || 'Falha ao confirmar coleta');
+                      }
+                    }}
+                  >
+                    <Text style={styles.textoConfirmar}>Confirmar coleta</Text>
+                  </TouchableOpacity>
+                </>
+              ) : null}
             </View>
           );
         }}
@@ -77,6 +102,10 @@ const getStatusStyle = (statusCode) => {
       return { backgroundColor: '#f4a261' };
     case 'accepted':
       return { backgroundColor: '#2a9d8f' };
+    case 'on_route':
+      return { backgroundColor: '#264653' };
+    case 'arrived':
+      return { backgroundColor: '#0a84ff' };
     case 'collected':
       return { backgroundColor: '#264653' };
     case 'canceled':
@@ -96,4 +125,7 @@ const styles = StyleSheet.create({
   statusTexto: { color: '#fff', fontWeight: '600' },
   botaoNovo: { marginTop: 24, backgroundColor: '#40916c', paddingVertical: 12, borderRadius: 10, alignItems: 'center' },
   textoBotaoNovo: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  infoBanner: { marginTop: 8, color: '#0a84ff', fontWeight: '600' },
+  botaoConfirmar: { marginTop: 8, backgroundColor: '#2f7a4b', paddingVertical: 10, borderRadius: 8, alignItems: 'center' },
+  textoConfirmar: { color: '#fff', fontWeight: '700' },
 });

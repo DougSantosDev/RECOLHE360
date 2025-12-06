@@ -152,7 +152,7 @@ class ScheduleController extends Controller
     public function updateStatus(Request $request, Schedule $schedule)
     {
         $request->validate([
-            'status' => 'required|in:on_route,collected,canceled',
+            'status' => 'required|in:on_route,arrived,collected,canceled',
         ]);
 
         $user = $request->user();
@@ -170,12 +170,21 @@ class ScheduleController extends Controller
             }
         }
 
+        if ($request->status === 'arrived') {
+            if ($user->id !== $schedule->collector_id) {
+                return response()->json(['ok' => false, 'message' => 'Only the assigned collector can mark arrived'], 403);
+            }
+            if ($schedule->status !== 'on_route') {
+                return response()->json(['ok' => false, 'message' => 'Schedule must be on_route before arrived'], 422);
+            }
+        }
+
         if ($request->status === 'collected') {
             if ($user->id !== $schedule->collector_id) {
                 return response()->json(['ok' => false, 'message' => 'Only the assigned collector can complete'], 403);
             }
-            if ($schedule->status !== 'accepted') {
-                return response()->json(['ok' => false, 'message' => 'Schedule must be accepted before collection'], 422);
+            if (!in_array($schedule->status, ['accepted', 'on_route', 'arrived'])) {
+                return response()->json(['ok' => false, 'message' => 'Schedule must be accepted/on_route/arrived before collection'], 422);
             }
         }
 
@@ -190,6 +199,48 @@ class ScheduleController extends Controller
 
         $schedule->update(['status' => $request->status]);
 
+        return ['ok' => true, 'schedule' => $schedule];
+    }
+
+    // Collector: a caminho
+    public function markOnRoute(Request $request, Schedule $schedule)
+    {
+        $user = $request->user();
+        if ($user->role !== 'collector' || $schedule->collector_id !== $user->id) {
+            return response()->json(['ok' => false, 'message' => 'Only assigned collector can mark on_route'], 403);
+        }
+        if ($schedule->status !== 'accepted') {
+            return response()->json(['ok' => false, 'message' => 'Schedule must be accepted before on_route'], 422);
+        }
+        $schedule->update(['status' => 'on_route']);
+        return ['ok' => true, 'schedule' => $schedule];
+    }
+
+    // Collector: chegou
+    public function markArrived(Request $request, Schedule $schedule)
+    {
+        $user = $request->user();
+        if ($user->role !== 'collector' || $schedule->collector_id !== $user->id) {
+            return response()->json(['ok' => false, 'message' => 'Only assigned collector can mark arrived'], 403);
+        }
+        if ($schedule->status !== 'on_route') {
+            return response()->json(['ok' => false, 'message' => 'Schedule must be on_route before arrived'], 422);
+        }
+        $schedule->update(['status' => 'arrived']);
+        return ['ok' => true, 'schedule' => $schedule];
+    }
+
+    // Donor: confirma coleta
+    public function confirmCollection(Request $request, Schedule $schedule)
+    {
+        $user = $request->user();
+        if ($user->role !== 'donor' || $schedule->user_id !== $user->id) {
+            return response()->json(['ok' => false, 'message' => 'Only the donor can confirm collection'], 403);
+        }
+        if ($schedule->status !== 'arrived') {
+            return response()->json(['ok' => false, 'message' => 'Schedule must be arrived before confirmation'], 422);
+        }
+        $schedule->update(['status' => 'collected']);
         return ['ok' => true, 'schedule' => $schedule];
     }
 }

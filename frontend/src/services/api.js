@@ -70,7 +70,9 @@ export const SchedulesAPI = {
   create: (payload) => api('/schedules', { method: 'POST', body: payload }),
   accept: (id) => api(`/schedules/${id}/accept`, { method: 'POST' }),
   updateStatus: (id, status) => api(`/schedules/${id}/status`, { method: 'POST', body: { status } }),
-  onRoute: (id) => api(`/schedules/${id}/status`, { method: 'POST', body: { status: 'on_route' } }),
+  onRoute: (id) => api(`/schedules/${id}/on-route`, { method: 'PUT' }),
+  arrived: (id) => api(`/schedules/${id}/arrived`, { method: 'PUT' }),
+  confirmCollection: (id) => api(`/schedules/${id}/confirm-collection`, { method: 'PUT' }),
   collected: (id) => api(`/schedules/${id}/status`, { method: 'POST', body: { status: 'collected' } }),
   cancel: (id) => api(`/schedules/${id}/status`, { method: 'POST', body: { status: 'canceled' } }),
 };

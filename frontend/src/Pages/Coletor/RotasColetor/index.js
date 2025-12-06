@@ -40,16 +40,16 @@ export default function RotasColetor() {
       await SchedulesAPI.onRoute(id);
       load();
     } catch (e) {
-      alert(e.message || 'Falha ao atualizar para a caminho');
+      alert(e.message || 'Falha ao marcar a caminho');
     }
   };
 
-  const collected = async (id) => {
+  const arrived = async (id) => {
     try {
-      await SchedulesAPI.collected(id);
+      await SchedulesAPI.arrived(id);
       load();
     } catch (e) {
-      alert(e.message || 'Falha ao concluir coleta');
+      alert(e.message || 'Falha ao marcar chegada');
     }
   };
 
@@ -92,10 +92,13 @@ export default function RotasColetor() {
                 </TouchableOpacity>
               ) : null}
               {item.status === 'on_route' ? (
-                <TouchableOpacity style={styles.botao} onPress={() => collected(item.id)}>
-                  <Feather name="check" size={20} color="#fff" />
-                  <Text style={styles.textoBotao}>Concluir</Text>
+                <TouchableOpacity style={styles.botao} onPress={() => arrived(item.id)}>
+                  <Feather name="map-pin" size={20} color="#fff" />
+                  <Text style={styles.textoBotao}>Cheguei</Text>
                 </TouchableOpacity>
+              ) : null}
+              {item.status === 'arrived' ? (
+                <Text style={{ color: '#0a84ff', fontWeight: '600', marginTop: 4 }}>Aguardando confirmação do doador...</Text>
               ) : null}
             </>
           )}

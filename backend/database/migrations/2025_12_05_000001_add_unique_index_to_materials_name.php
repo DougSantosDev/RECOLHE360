@@ -2,8 +2,8 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
     public function up(): void
@@ -22,7 +22,7 @@ return new class extends Migration {
 
             if (!empty($toDelete)) {
                 // Para cada pivot que aponta para materiais duplicados,
-                // migra para o material a ser mantido; se j□ existir a combina□▒▒o
+                // migra para o material a ser mantido; se já existir a combinação
                 // schedule_id + keepId, soma quantidades e remove o duplicado.
                 $pivotRows = DB::table('material_schedule')
                     ->whereIn('material_id', $toDelete)

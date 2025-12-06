@@ -42,13 +42,12 @@ export default function AgendamentosColetor() {
     }
   };
 
-  const concluir = async (scheduleId) => {
+  const marcarArrived = async (id) => {
     try {
-      await SchedulesAPI.collected(scheduleId);
-      Alert.alert('Sucesso', 'Agendamento marcado como concluido!');
+      await SchedulesAPI.arrived(id);
       load();
     } catch (e) {
-      Alert.alert('Erro', e.message || 'Falha ao concluir');
+      Alert.alert('Erro', e.message || 'Falha ao marcar chegada');
     }
   };
 
@@ -58,10 +57,9 @@ export default function AgendamentosColetor() {
     const dt = item.scheduled_at ? new Date(item.scheduled_at).toLocaleString() : 'Sem data';
     const materials = (item.materials || [])
       .map((m) => `${m.name} (${Number(m.pivot?.quantity_kg || 0)} kg)`).join(', ');
-    const concluido = item.status === 'collected';
-    const onRoute = item.status === 'on_route';
+    const status = item.status;
     return (
-      <View style={[styles.item, concluido && styles.itemConcluido]}>
+      <View style={[styles.item, status === 'arrived' && styles.itemChegada, status === 'collected' && styles.itemConcluido]}>
         <View style={styles.info}>
           <Text style={styles.nome}>{donor}</Text>
           <Text style={styles.texto}>{place}</Text>
@@ -74,21 +72,24 @@ export default function AgendamentosColetor() {
             <Feather name="map-pin" size={18} color="#329845" />
             <Text style={styles.textoMapa}>Mapa</Text>
           </TouchableOpacity>
-          {!concluido ? (
-            onRoute ? (
-              <TouchableOpacity style={styles.botao} onPress={() => concluir(item.id)}>
-                <Feather name="check" size={20} color="#fff" />
-                <Text style={styles.textoBotao}>Concluir</Text>
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity style={styles.botao} onPress={() => marcarOnRoute(item.id)}>
-                <Feather name="navigation" size={20} color="#fff" />
-                <Text style={styles.textoBotao}>A caminho</Text>
-              </TouchableOpacity>
-            )
-          ) : (
-            <Text style={styles.concluido}>Concluido</Text>
-          )}
+          {status === 'accepted' ? (
+            <TouchableOpacity style={styles.botao} onPress={() => marcarOnRoute(item.id)}>
+              <Feather name="navigation" size={20} color="#fff" />
+              <Text style={styles.textoBotao}>A caminho</Text>
+            </TouchableOpacity>
+          ) : null}
+          {status === 'on_route' ? (
+            <TouchableOpacity style={styles.botao} onPress={() => marcarArrived(item.id)}>
+              <Feather name="map-pin" size={20} color="#fff" />
+              <Text style={styles.textoBotao}>Cheguei</Text>
+            </TouchableOpacity>
+          ) : null}
+          {status === 'arrived' ? (
+            <Text style={{ color: '#0a84ff', fontWeight: '600' }}>Aguardando confirmação do doador</Text>
+          ) : null}
+          {status === 'collected' ? (
+            <Text style={{ color: '#329845', fontWeight: '700' }}>Coleta finalizada</Text>
+          ) : null}
         </View>
       </View>
     );
@@ -112,6 +113,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, paddingVertical: 50, backgroundColor: '#f2fdf2', padding: 20 },
   titulo: { fontSize: 24, fontWeight: 'bold', color: '#329845', marginBottom: 20, textAlign: 'center' },
   item: { backgroundColor: '#fff', padding: 16, borderRadius: 8, marginBottom: 12, borderWidth: 1, borderColor: '#ccc' },
+  itemChegada: { borderColor: '#0a84ff' },
   itemConcluido: { backgroundColor: '#e0ffe0', borderColor: '#329845' },
   info: { marginBottom: 10 },
   nome: { fontSize: 16, fontWeight: 'bold', color: '#333' },
