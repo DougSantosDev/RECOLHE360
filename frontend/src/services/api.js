@@ -73,6 +73,8 @@ export const SchedulesAPI = {
   onRoute: (id) => api(`/schedules/${id}/on-route`, { method: 'PUT' }),
   arrived: (id) => api(`/schedules/${id}/arrived`, { method: 'PUT' }),
   confirmCollection: (id) => api(`/schedules/${id}/confirm-collection`, { method: 'PUT' }),
+  sendLocation: (id, payload) => api(`/schedules/${id}/location`, { method: 'POST', body: payload }),
+  track: (id) => api(`/schedules/${id}/track`),
   collected: (id) => api(`/schedules/${id}/status`, { method: 'POST', body: { status: 'collected' } }),
   cancel: (id) => api(`/schedules/${id}/status`, { method: 'POST', body: { status: 'canceled' } }),
 };

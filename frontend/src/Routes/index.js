@@ -24,6 +24,7 @@ import AgendamentosDoador from '../Pages/Doador/Agendamentos';
 import NovoAgendamento from '../Pages/Doador/Agendamentos/NovoAgendamentos';
 import NoticiasDetalhes from '../Pages/Doador/Noticias/NoticiasDetalhes';
 import MinhaContaDoador from '../Pages/Doador/minhaArea';
+import TrackColetaDoador from '../Pages/Doador/TrackColeta';
 
 // COLETOR
 import HomeColetor from '../Pages/Coletor/HomeColetor';
@@ -283,6 +284,11 @@ export default function Routes() {
         name="LegalModal"
         component={LegalModal}
         options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="TrackColeta"
+        component={TrackColetaDoador}
+        options={{ headerShown: true, title: 'Rota da coleta' }}
       />
     </Stack.Navigator>
   );

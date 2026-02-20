@@ -1,9 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Linking } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import { useFocusEffect } from '@react-navigation/native';
 import { SchedulesAPI } from '../../../services/api';
 import { useThemeRecolhe } from '../../../context/ThemeContext';
+import { useCollectorLiveTracking } from '../../../hooks/useCollectorLiveTracking';
 
 export default function RotasColetor() {
   const [tab, setTab] = useState('pending');
@@ -47,15 +48,11 @@ export default function RotasColetor() {
     }
   }, []);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  useCollectorLiveTracking(accepted);
 
   useFocusEffect(
     useCallback(() => {
       load();
-      const interval = setInterval(load, 5000);
-      return () => clearInterval(interval);
     }, [load]),
   );
 

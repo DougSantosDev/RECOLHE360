@@ -54,7 +54,6 @@ class ScheduleController extends Controller
             'pickup_address_text'     => 'nullable|string|max:500',
             'pickup_lat'              => 'nullable|numeric',
             'pickup_lng'              => 'nullable|numeric',
-            'notes'                   => 'nullable|string',
             'materials'               => 'required|array|min:1',
             'materials.*.id'          => 'required|exists:materials,id',
             'materials.*.quantity_kg' => 'required|numeric|min:0.1',
@@ -242,5 +241,120 @@ class ScheduleController extends Controller
         }
         $schedule->update(['status' => 'collected']);
         return ['ok' => true, 'schedule' => $schedule];
+    }
+
+    // Collector: envia a localizacao ao vivo durante deslocamento
+    public function updateLocation(Request $request, Schedule $schedule)
+    {
+        $user = $request->user();
+        if ($user->role !== 'collector' || $schedule->collector_id !== $user->id) {
+            return response()->json(['ok' => false, 'message' => 'Only assigned collector can send location'], 403);
+        }
+        if ($schedule->status !== 'on_route') {
+            return response()->json(['ok' => false, 'message' => 'Schedule must be on_route to send location'], 422);
+        }
+
+        $data = $request->validate([
+            'lat' => 'required|numeric|between:-90,90',
+            'lng' => 'required|numeric|between:-180,180',
+            'heading' => 'nullable|numeric|between:0,360',
+            'speed_kmh' => 'nullable|numeric|min:0|max:250',
+            'recorded_at' => 'nullable|date',
+        ]);
+
+        $location = $schedule->locations()->create([
+            'collector_id' => $user->id,
+            'lat' => $data['lat'],
+            'lng' => $data['lng'],
+            'heading' => $data['heading'] ?? null,
+            'speed_kmh' => $data['speed_kmh'] ?? null,
+            'recorded_at' => $data['recorded_at'] ?? now(),
+        ]);
+
+        return response()->json([
+            'ok' => true,
+            'location' => $location,
+        ]);
+    }
+
+    // Donor/collector: consulta trilha e estimativa de chegada
+    public function track(Request $request, Schedule $schedule)
+    {
+        $user = $request->user();
+
+        if ($user->role === 'donor' && $schedule->user_id !== $user->id) {
+            return response()->json(['ok' => false, 'message' => 'Unauthorized schedule'], 403);
+        }
+
+        if ($user->role === 'collector' && $schedule->collector_id !== $user->id) {
+            return response()->json(['ok' => false, 'message' => 'Unauthorized schedule'], 403);
+        }
+
+        $schedule->load('collector:id,name');
+
+        $locations = $schedule->locations()
+            ->orderByDesc('recorded_at')
+            ->limit(40)
+            ->get()
+            ->sortBy('recorded_at')
+            ->values();
+
+        $latest = $locations->last();
+
+        $distanceKm = null;
+        $etaMinutes = null;
+
+        if (
+            $latest
+            && $schedule->pickup_lat !== null
+            && $schedule->pickup_lng !== null
+        ) {
+            $distanceKm = round(
+                $this->haversineKm(
+                    (float) $latest->lat,
+                    (float) $latest->lng,
+                    (float) $schedule->pickup_lat,
+                    (float) $schedule->pickup_lng
+                ),
+                2
+            );
+
+            $speedKmh = (float) ($latest->speed_kmh ?? 25);
+            if ($speedKmh < 5) {
+                $speedKmh = 25;
+            }
+            $etaMinutes = (int) ceil(($distanceKm / $speedKmh) * 60);
+        }
+
+        return response()->json([
+            'ok' => true,
+            'schedule' => [
+                'id' => $schedule->id,
+                'status' => $schedule->status,
+                'scheduled_at' => $schedule->scheduled_at,
+                'pickup_address_text' => $schedule->pickup_address_text,
+                'pickup_lat' => $schedule->pickup_lat,
+                'pickup_lng' => $schedule->pickup_lng,
+            ],
+            'collector' => $schedule->collector,
+            'latest_location' => $latest,
+            'locations' => $locations,
+            'distance_km' => $distanceKm,
+            'eta_minutes' => $etaMinutes,
+        ]);
+    }
+
+    private function haversineKm(float $lat1, float $lng1, float $lat2, float $lng2): float
+    {
+        $earthRadius = 6371;
+        $dLat = deg2rad($lat2 - $lat1);
+        $dLng = deg2rad($lng2 - $lng1);
+
+        $a = sin($dLat / 2) * sin($dLat / 2)
+            + cos(deg2rad($lat1)) * cos(deg2rad($lat2))
+            * sin($dLng / 2) * sin($dLng / 2);
+        $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
+
+        return $earthRadius * $c;
     }
 }

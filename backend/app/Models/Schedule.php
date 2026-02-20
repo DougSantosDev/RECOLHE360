@@ -43,4 +43,14 @@ class Schedule extends Model
             ->withPivot('quantity_kg')
             ->withTimestamps();
     }
+
+    public function locations()
+    {
+        return $this->hasMany(ScheduleLocation::class);
+    }
+
+    public function latestLocation()
+    {
+        return $this->hasOne(ScheduleLocation::class)->latestOfMany('recorded_at');
+    }
 }

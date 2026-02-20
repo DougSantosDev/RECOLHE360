@@ -135,10 +135,13 @@ export default function SignUp({ navigation, route }) {
       setPassword('');
       setConfirmPassword('');
       setAcceptTerms(false);
-
-      navigation.navigate('SignIn', { tipo });
     } catch (error) {
       console.log(error);
+      const emailError = error?.status === 422 ? error?.data?.errors?.email?.[0] : null;
+      if (emailError) {
+        Alert.alert('Erro', 'Email ja cadastrado.');
+        return;
+      }
       Alert.alert('Erro', error.message || 'Erro ao cadastrar usuario.');
     } finally {
       setLoading(false);

@@ -87,6 +87,7 @@ export default function Agendamentos() {
           const st = statusPT[statusCode] || statusCode;
           const isArrived = statusCode === 'arrived';
           const isOnRoute = statusCode === 'on_route';
+          const canTrack = ['accepted', 'on_route', 'arrived'].includes(statusCode) && !!item.collector_id;
           const statusStyle = getStatusStyle(statusCode);
           return (
             <View style={[styles.card, { backgroundColor: palette.card, borderColor: palette.border }]}>
@@ -117,13 +118,21 @@ export default function Agendamentos() {
                   </TouchableOpacity>
                 </>
               ) : null}
+              {canTrack ? (
+                <TouchableOpacity
+                  style={[styles.botaoRota, { borderColor: palette.primary }]}
+                  onPress={() => navigation.navigate('TrackColeta', { scheduleId: item.id })}
+                >
+                  <Text style={[styles.textoBotaoRota, { color: palette.primary }]}>Acompanhar rota do coletor</Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
           );
         }}
         ListFooterComponent={
           <TouchableOpacity
             style={[styles.botaoNovo, { backgroundColor: palette.primary }]}
-            onPress={() => navigation.navigate('Reciclados')}
+            onPress={() => navigation.navigate('RecicladosTabDoador')}
           >
             <Text style={styles.textoBotaoNovo}>+ Novo Agendamento</Text>
           </TouchableOpacity>
@@ -146,4 +155,14 @@ const styles = StyleSheet.create({
   infoBanner: { marginTop: 8, fontWeight: '600' },
   botaoConfirmar: { marginTop: 8, paddingVertical: 10, borderRadius: 8, alignItems: 'center' },
   textoConfirmar: { color: '#fff', fontWeight: '700' },
+  botaoRota: {
+    marginTop: 10,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  textoBotaoRota: {
+    fontWeight: '700',
+  },
 });

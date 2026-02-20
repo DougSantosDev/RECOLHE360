@@ -1,10 +1,11 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useThemeRecolhe } from '../../../context/ThemeContext';
 import { useUser } from '../../../context/UsarContext';
 import { SchedulesAPI } from '../../../services/api';
+import { useCollectorLiveTracking } from '../../../hooks/useCollectorLiveTracking';
 
 export default function HomeColetor() {
   const navigation = useNavigation();
@@ -14,6 +15,7 @@ export default function HomeColetor() {
   const [stats, setStats] = useState({ available: 0, accepted: 0, completed: 0 });
   const [nextPickup, setNextPickup] = useState(null);
   const [recent, setRecent] = useState([]);
+  const [myCollections, setMyCollections] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const firstName = useMemo(() => user?.name?.split(' ')[0] || 'Coletor', [user]);
@@ -67,6 +69,7 @@ export default function HomeColetor() {
       const availableList = pendResponse?.data || pendResponse || [];
       const mineResponse = await SchedulesAPI.myCollections();
       const myList = Array.isArray(mineResponse) ? mineResponse : mineResponse?.data || [];
+      setMyCollections(myList);
 
       const completed = myList.filter((item) => item.status === 'collected');
       const accepted = myList.filter((item) =>
@@ -104,15 +107,11 @@ export default function HomeColetor() {
     }
   }, [setColetasConfirmadas]);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  useCollectorLiveTracking(myCollections);
 
   useFocusEffect(
     useCallback(() => {
       fetchData();
-      const interval = setInterval(fetchData, 5000);
-      return () => clearInterval(interval);
     }, [fetchData]),
   );
 

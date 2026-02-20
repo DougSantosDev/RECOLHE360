@@ -32,6 +32,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('schedules/{schedule}/accept',  [ScheduleController::class, 'accept']);
     Route::put('schedules/{schedule}/on-route', [ScheduleController::class, 'markOnRoute']);
     Route::put('schedules/{schedule}/arrived',  [ScheduleController::class, 'markArrived']);
+    Route::post('schedules/{schedule}/location', [ScheduleController::class, 'updateLocation']);
+    Route::get('schedules/{schedule}/track', [ScheduleController::class, 'track']);
     Route::put('schedules/{schedule}/confirm-collection', [ScheduleController::class, 'confirmCollection']);
 
     // status updates
