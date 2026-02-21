@@ -8,16 +8,37 @@ class RouteDirectionsService
 {
     public function getRoute(float $originLat, float $originLng, float $destLat, float $destLng): ?array
     {
-        $provider = strtolower((string) config('services.routing.provider', 'osrm'));
+        $primaryProvider = strtolower((string) config('services.routing.provider', 'google'));
+        $fallbackProvider = strtolower((string) config('services.routing.fallback_provider', 'osrm'));
 
-        if ($provider === 'google') {
-            $google = $this->googleDirections($originLat, $originLng, $destLat, $destLng);
-            if ($google) {
-                return $google;
-            }
+        $primary = $this->resolveByProvider($primaryProvider, $originLat, $originLng, $destLat, $destLng);
+        if ($primary) {
+            return $primary;
         }
 
-        return $this->osrmDirections($originLat, $originLng, $destLat, $destLng);
+        if ($fallbackProvider !== '' && $fallbackProvider !== $primaryProvider) {
+            return $this->resolveByProvider($fallbackProvider, $originLat, $originLng, $destLat, $destLng);
+        }
+
+        return null;
+    }
+
+    private function resolveByProvider(
+        string $provider,
+        float $originLat,
+        float $originLng,
+        float $destLat,
+        float $destLng
+    ): ?array {
+        if ($provider === 'google') {
+            return $this->googleDirections($originLat, $originLng, $destLat, $destLng);
+        }
+
+        if ($provider === 'osrm') {
+            return $this->osrmDirections($originLat, $originLng, $destLat, $destLng);
+        }
+
+        return null;
     }
 
     private function osrmDirections(float $originLat, float $originLng, float $destLat, float $destLng): ?array

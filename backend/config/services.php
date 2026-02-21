@@ -36,7 +36,8 @@ return [
     ],
 
     'routing' => [
-        'provider' => env('ROUTING_PROVIDER', 'osrm'), // osrm | google
+        'provider' => env('ROUTING_PROVIDER', 'google'), // google | osrm
+        'fallback_provider' => env('ROUTING_FALLBACK_PROVIDER', 'osrm'), // osrm | google
         'osrm_base_url' => env('OSRM_BASE_URL', 'https://router.project-osrm.org'),
         'osrm_profile' => env('OSRM_PROFILE', 'driving'),
         'google_maps_api_key' => env('GOOGLE_MAPS_API_KEY'),
