@@ -63,6 +63,16 @@ export default function TrackColeta({ route }) {
       .filter((item) => Number.isFinite(item.latitude) && Number.isFinite(item.longitude));
   }, [track]);
 
+  const routePoints = useMemo(() => {
+    const list = track?.route?.points || [];
+    return list
+      .map((item) => ({
+        latitude: Number(item.lat),
+        longitude: Number(item.lng),
+      }))
+      .filter((item) => Number.isFinite(item.latitude) && Number.isFinite(item.longitude));
+  }, [track]);
+
   const latest = track?.latest_location
     ? {
         latitude: Number(track.latest_location.lat),
@@ -77,6 +87,10 @@ export default function TrackColeta({ route }) {
           longitude: Number(track.schedule.pickup_lng),
         }
       : null;
+
+  const distanceKm = track?.route?.distance_km ?? track?.distance_km;
+  const etaMinutes = track?.route?.eta_minutes ?? track?.eta_minutes;
+  const routeProvider = track?.route?.provider || 'straight_line';
 
   const initialRegion = useMemo(() => {
     const base = latest || destination || { latitude: -23.55052, longitude: -46.633308 };
@@ -98,16 +112,19 @@ export default function TrackColeta({ route }) {
         {track?.collector?.name ? (
           <Text style={[styles.subtitle, { color: palette.muted }]}>Coletor: {track.collector.name}</Text>
         ) : null}
-        {track?.distance_km !== null && track?.distance_km !== undefined ? (
+        {distanceKm !== null && distanceKm !== undefined ? (
           <Text style={[styles.subtitle, { color: palette.muted }]}>
-            Distancia: {track.distance_km} km
+            Distancia: {distanceKm} km
           </Text>
         ) : null}
-        {track?.eta_minutes !== null && track?.eta_minutes !== undefined ? (
+        {etaMinutes !== null && etaMinutes !== undefined ? (
           <Text style={[styles.subtitle, { color: palette.muted }]}>
-            ETA aproximado: {track.eta_minutes} min
+            ETA aproximado: {etaMinutes} min
           </Text>
         ) : null}
+        <Text style={[styles.subtitle, { color: palette.muted }]}>
+          Rota: {routeProvider === 'google' ? 'Google Directions' : routeProvider === 'osrm' ? 'OSRM' : 'Linha reta'}
+        </Text>
 
         <TouchableOpacity style={[styles.refreshButton, { borderColor: palette.primary }]} onPress={loadTrack}>
           <Feather name="refresh-cw" size={15} color={palette.primary} />
@@ -134,7 +151,15 @@ export default function TrackColeta({ route }) {
             <Polyline coordinates={points} strokeColor={palette.accent} strokeWidth={4} />
           ) : null}
 
-          {latest && destination ? (
+          {routePoints.length > 1 ? (
+            <Polyline
+              coordinates={routePoints}
+              strokeColor={palette.primary}
+              strokeWidth={4}
+            />
+          ) : null}
+
+          {routePoints.length <= 1 && latest && destination ? (
             <Polyline
               coordinates={[latest, destination]}
               strokeColor={palette.primary}

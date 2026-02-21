@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\RouteDirectionsService;
 use App\Models\Schedule;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -278,7 +279,7 @@ class ScheduleController extends Controller
     }
 
     // Donor/collector: consulta trilha e estimativa de chegada
-    public function track(Request $request, Schedule $schedule)
+    public function track(Request $request, Schedule $schedule, RouteDirectionsService $routeDirectionsService)
     {
         $user = $request->user();
 
@@ -303,28 +304,46 @@ class ScheduleController extends Controller
 
         $distanceKm = null;
         $etaMinutes = null;
+        $routePoints = [];
+        $routeProvider = 'straight_line';
 
         if (
             $latest
             && $schedule->pickup_lat !== null
             && $schedule->pickup_lng !== null
         ) {
-            $distanceKm = round(
-                $this->haversineKm(
-                    (float) $latest->lat,
-                    (float) $latest->lng,
-                    (float) $schedule->pickup_lat,
-                    (float) $schedule->pickup_lng
-                ),
-                2
-            );
+            $originLat = (float) $latest->lat;
+            $originLng = (float) $latest->lng;
+            $destLat = (float) $schedule->pickup_lat;
+            $destLng = (float) $schedule->pickup_lng;
 
-            $speedKmh = (float) ($latest->speed_kmh ?? 25);
-            if ($speedKmh < 5) {
-                $speedKmh = 25;
+            $routeData = $routeDirectionsService->getRoute($originLat, $originLng, $destLat, $destLng);
+
+            if ($routeData) {
+                $distanceKm = $routeData['distance_km'];
+                $etaMinutes = $routeData['eta_minutes'];
+                $routePoints = $routeData['points'] ?? [];
+                $routeProvider = $routeData['provider'] ?? 'osrm';
+            } else {
+                $distanceKm = round(
+                    $this->haversineKm($originLat, $originLng, $destLat, $destLng),
+                    2
+                );
+
+                $speedKmh = (float) ($latest->speed_kmh ?? 25);
+                if ($speedKmh < 5) {
+                    $speedKmh = 25;
+                }
+                $etaMinutes = (int) ceil(($distanceKm / $speedKmh) * 60);
             }
-            $etaMinutes = (int) ceil(($distanceKm / $speedKmh) * 60);
         }
+
+        $route = [
+            'provider' => $routeProvider,
+            'distance_km' => $distanceKm,
+            'eta_minutes' => $etaMinutes,
+            'points' => $routePoints,
+        ];
 
         return response()->json([
             'ok' => true,
@@ -339,6 +358,8 @@ class ScheduleController extends Controller
             'collector' => $schedule->collector,
             'latest_location' => $latest,
             'locations' => $locations,
+            'route' => $route,
+            // Mantidos por compatibilidade com telas antigas
             'distance_km' => $distanceKm,
             'eta_minutes' => $etaMinutes,
         ]);
